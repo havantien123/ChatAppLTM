@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<java version="14.0.1" class="java.beans.XMLDecoder">
+ <object class="utils.ClientInfoServer">
+  <void property="clientName">
+   <string>dang</string>
+  </void>
+  <void property="clientPassword">
+   <string>987</string>
+  </void>
+  <void property="clientStatus">
+   <string>off</string>
+  </void>
+  <void property="friendList">
+   <object class="java.util.LinkedList">
+    <void method="add">
+     <string>khuong</string>
+    </void>
+    <void method="add">
+     <string>thien</string>
+    </void>
+   </object>
+  </void>
+ </object>
+</java>
