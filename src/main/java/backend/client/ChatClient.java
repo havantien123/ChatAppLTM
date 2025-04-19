@@ -59,12 +59,16 @@ public class ChatClient extends Observable {
         this.socket.close();
     }
 
+
+
+
     public ClientInfo getClientInfo() {
         return this.clientInfo;
     }
 
     public RequestSender getRequestSender() { return requestSender; }
-    public HashMap<String, PeerHandler>  getPeerList() {return this.peerList;}
+    public HashMap<String, PeerHandler>  getPeerList() {
+        return this.peerList;}
 
     public Boolean start() {
         System.out.println("[CLIENT] Start client.");
@@ -73,9 +77,13 @@ public class ChatClient extends Observable {
             System.out.println("[CLIENT] Cannot connect to server. Quit.");
             return false;
         }
+        //Lưu trữ danh sạch bạn bè
         this.peerList = new HashMap<>();
+        //tạo đối tượng này sẽ xử lí yêu cầu đến máy chủ với Chatclient hiện tại và luồng đầu ra
         this.requestSender = new RequestSender(this, new DataOutputStream((this.os)));
+        // Tạo thread để chạy luồn this.requestSender
         this.clientSenderThread = new Thread(this.requestSender);
+        //Nhận phản hồi từ máy chủ
         this.requestReceiver = new RequestReceiver(this, new DataInputStream(this.is));
         this.clientReceiverThread = new Thread(this.requestReceiver);
 
@@ -99,15 +107,22 @@ public class ChatClient extends Observable {
     }
 
     public boolean connectToServer(){
+        // đếm thử số lần kết nối
         int countConnect = 0;
         System.out.println("[CLIENT] Trying connecting to server ...");
         do {
             try {
+                // tạo ra socket để kết nối
                 this.socket = new Socket();
+                // cố gắng kết nối với máy chủ bằng địa chỉ và cổng thời gian chời là 5s
                 this.socket.connect(new InetSocketAddress(serverAddress, serverPort), 5000);
+                // nếu kết nối thành công thì tạo luồng đầu vào
+                System.out.println(this.socket);
                 this.is = this.socket.getInputStream();
+                // nếu kết nối thành công thì tạo luồng đầu ra
                 this.os = this.socket.getOutputStream();
                 System.out.print(String.format("[CLIENT] Successful connect to address %s port %d\n", this.serverAddress, this.serverPort));
+               //Trả về true nếu kết nối thành công
                 return true;
             } catch (IOException e) {
                 e.printStackTrace();
@@ -120,6 +135,7 @@ public class ChatClient extends Observable {
                 }
             }
         } while(countConnect < 5);
+        // trả về false nếu kết nối không thành công
         return false;
     }
 
@@ -169,6 +185,7 @@ public class ChatClient extends Observable {
             }
             synchronized (this) {
                 this.responseMessage = segments[1] + "-" + "login";
+                // success-login
             }
 
         }
@@ -289,5 +306,5 @@ public class ChatClient extends Observable {
         setChanged();
         notifyObservers(s);
     }
-    
+
 }

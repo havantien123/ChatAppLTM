@@ -16,8 +16,10 @@ public class LoginController {
     }
 
     public void initController() {
+        //trả về true nếu thành công
         boolean checked = this.chatClient.start();
         if (checked) {
+            this.loginUI.setVisible(true);
             this.loginUI.getLogin_but().addActionListener(e->login());
             this.loginUI.getPasswordField().addKeyListener(new java.awt.event.KeyAdapter() {
                 public void keyPressed(java.awt.event.KeyEvent evt) {
@@ -27,7 +29,6 @@ public class LoginController {
 
             this.loginUI.getSignup_but().addActionListener(e->signup());
 
-            this.loginUI.setVisible(true);
         }
         else {
             this.loginUI.dispose();
@@ -58,6 +59,7 @@ public class LoginController {
         if (resMess.equals("success-signup")) {
             this.loginUI.setVisible(false);
             MainUI mainUI = new MainUI();
+            mainUI.setUserTitle(username);
             MainController mainController = new MainController(mainUI, this.chatClient);
             this.chatClient.addObserver(mainController);
             mainController.initController();
@@ -71,10 +73,14 @@ public class LoginController {
     }
 
     private void login() {
+        //Lấy tên người dùng từ trường dữ liệu
         String username = this.loginUI.getUser_input().getText();
+        //Lấy mật khẩu
         String password = new String(this.loginUI.getPass_input().getPassword());
+
         if (username.isEmpty() || password.isEmpty())
         {
+
             JOptionPane.showMessageDialog(null, "Invalid input!");
         }
         else {
@@ -84,11 +90,13 @@ public class LoginController {
         do {
             synchronized (this) {
                 resMess = this.chatClient.getResponseMessage();
+                //nhận dữ liệu từ chatclient nếu là đăng nhập thành công
             }
         } while (resMess == null);
         if (resMess.equals("success-login")) {
             this.loginUI.dispose();
             MainUI mainUI = new MainUI();
+            mainUI.setUserTitle(username);
             MainController mainController = new MainController(mainUI, this.chatClient);
             this.chatClient.addObserver(mainController);
             mainController.initController();

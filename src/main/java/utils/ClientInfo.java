@@ -9,7 +9,7 @@ public class ClientInfo {
     public LinkedList<PeerInfo> friendList;
 //    private String clientStatus;
 
-    public ClientInfo(String name) {
+    public  ClientInfo(String name) {
         this.name     = name;
         this.friendList = new LinkedList<>();
 //        this.clientStatus   = clientStatus;

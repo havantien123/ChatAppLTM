@@ -326,7 +326,8 @@ public class LoginUI extends javax.swing.JFrame {
         return this.pass_input;
     }
 
-    public JButton getSignup_but(){ return this.signup_but;}
+    public JButton getSignup_but(){
+        return this.signup_but;}
 
     public JTextField getUser_signup_input(){return this.user_signup_input;}
     public JPasswordField getPass_signup_input(){return this.pass_signup_input;}

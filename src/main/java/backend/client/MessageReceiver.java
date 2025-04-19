@@ -37,6 +37,8 @@ public class MessageReceiver implements Runnable {
                         case "message":
 //                            Message mess = new Message(segments[1], this.targetClient.getClientName());
                             String mess = segments[1];
+//                            System.out.println(mess);
+                            System.out.println("peerHandler Reciver"+peerHandler);
                             if ( !this.peerHandler.getStatusWindow())
                                 this.peerHandler.client.changeFriendStatus("friendstatus", this.peerHandler.getTargetClientName(),"notify");
                             this.peerHandler.addText(mess);

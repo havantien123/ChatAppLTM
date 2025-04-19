@@ -7,13 +7,12 @@ package backend.client;
 
 import java.io.BufferedInputStream;
 import java.io.DataOutputStream;
-import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.io.OutputStream;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.Arrays;
@@ -22,7 +21,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.JOptionPane;
-import utils.FileInfo;
+import javax.swing.text.BadLocationException;
 
 /**
  *
@@ -39,10 +38,13 @@ public class SendFile extends Thread{
     private String send_address;
     private int time_out;
     private InputStream in;
-    public SendFile(MessageSender send_mess , String filename , String path){
+    private  PeerHandler peerHandler;
+    public SendFile(MessageSender send_mess , String filename , String path, PeerHandler peerHandler){
         this.sender = send_mess;
         this.filename = filename;
         this.filepath = path;
+        this.peerHandler = peerHandler;
+
         this.time_out = 10;
         allowSending = 0;
     }
@@ -56,7 +58,7 @@ public class SendFile extends Thread{
             Logger.getLogger(SendFile.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
-    
+
     private void sending() throws IOException{
         sender.sendMessage("SendFile");
         System.out.println("Send request send file");
@@ -76,6 +78,7 @@ public class SendFile extends Thread{
         }
         else {
             System.out.println("Connect to client "+ send_address +" "+ portReceiveFile);
+       // Kết nối đến máy chủ
             Socket server = new Socket();
             server.connect(new InetSocketAddress(send_address, portReceiveFile));
             System.out.println("Start send file to friend...");
@@ -99,22 +102,34 @@ public class SendFile extends Thread{
     }
     
     private void sendingFile(Socket server) throws IOException {
+        InetAddress myIP = InetAddress.getLocalHost();; // Lấy địa chỉ IP của máy
+        String myLocalIP = myIP.getHostAddress();
         try {
-//            FileInfo fileInfo = getFileInfo(filepath);
-//            oos = new ObjectOutputStream(server.getOutputStream());
-//            oos.writeObject(fileInfo);
             in = new BufferedInputStream(new FileInputStream(filepath));
+            System.out.println("filepath"+filepath+"filename"+filename);
             int len;
             byte[] temp = new byte[12345];
             DataOutputStream os = new DataOutputStream(server.getOutputStream());
             while (((len = in.read(temp)) > 0)) {
+                // Chuyển đổi dữ liệu byte sang chuỗi để hiển thị
+                String dataRead = new String(temp, 0, len);
+                System.out.println("Data read: " + dataRead);
                 if (len < 12345) {
                     byte[] extra;
+                    // Sao chép dữ liệu hợp lệ vào mảng byte mới với độ dài chính xác
                     extra = Arrays.copyOf(temp, len);
                     System.out.println("[CLIENT] Finish send file");
-                    os.writeUTF("endfile," + this.filename + "," + Base64.getEncoder().encodeToString(extra));
-                } else {
-//                    System.out.println("[CLIENT] Sending file");
+                    System.out.println("extra"+ Base64.getEncoder().encodeToString(extra));
+                    // Gửi phần cuối của tệp với thông báo chỉ ra kết thúc tệp
+
+                    os.writeUTF("endfile," +myLocalIP+", "+ this.filename + "," + Base64.getEncoder().encodeToString(extra));
+                    try {
+
+                        this.peerHandler.addfile("("+myLocalIP+" ) "+filepath);
+                    } catch (BadLocationException e) {
+                        e.printStackTrace();
+                    }                } else {
+                    // Gửi một phần của tệp chỉ ra rằng có thể có thêm dữ liệu
                     os.writeUTF("file," + Base64.getEncoder().encodeToString(temp));
                 }
 

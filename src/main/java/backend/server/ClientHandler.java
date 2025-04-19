@@ -26,6 +26,18 @@ public class ClientHandler implements Runnable{
     }
 
     @Override
+    public String toString() {
+        return "ClientHandler{" +
+                "server=" + server +
+                ", client=" + client +
+                ", reader=" + reader +
+                ", writer=" + writer +
+                ", logged=" + logged +
+                ", clientInfo=" + clientInfo +
+                '}';
+    }
+
+    @Override
     public void run() {
         try {
             this.reader = new DataInputStream(client.getInputStream());
@@ -41,15 +53,20 @@ public class ClientHandler implements Runnable{
                     String type = segments[0];
                     switch (type) {
                         case "signup":
+                            System.out.println("serversignup");
                             this.handleSignup(segments);
                             break;
                         case "login":
+                            System.out.println("serverloignup");
+
                             this.handleLogin(segments);
                             break;
                         case "logout":
                             this.handleLogout();
                             break;
                         case "addfriend":
+                            System.out.println("addFriend_ClietHanddle");
+
                             this.handleAddFriend(segments[0], segments[1]);
                             break;
                         case "connectfriendto":
@@ -84,7 +101,6 @@ public class ClientHandler implements Runnable{
     }
 
     private void handleDisconnect() throws IOException {
-        System.out.println("cc");
         server.markOffline(clientInfo.getClientName());
         this.notifyOffline();
     }
@@ -123,9 +139,13 @@ public class ClientHandler implements Runnable{
     private void handleSignup(String[] segments) throws IOException {
         System.out.println(String.format("[SERVER] Sign-up with username %s, password %s", segments[1], segments[2]));
         if (!server.findUsername(segments[1])) {
+            // tạo tài khoản người dùng
             server.createAccount(segments[1], segments[2]);
+            //set giá trị người dùng
             this.clientInfo = new ClientInfo(segments[1]);
+            // set cho user tinh trang online
             server.markOnline(clientInfo.getClientName());
+
             this.sendResponse("signup-" + "success-" + segments[1] + '-' + "0");
 //            sendSuccessRes(segments[0], segments[1]);
         } else {
@@ -134,6 +154,7 @@ public class ClientHandler implements Runnable{
     }
 
     private void handleLogin(String[] segments) throws IOException {
+        //username +password
         int checkLogin = server.checkPassword(segments[1], segments[2]);
         if (checkLogin == 0) {
 //            clientInfo.setClientName(segments[1]);
@@ -180,18 +201,32 @@ public class ClientHandler implements Runnable{
     }
 
     private void handleAddFriend(String req, String friendName) throws IOException {
+        // Kiểm tra xem friendName có tồn tại trên server không
         if (server.findUsername(friendName)) {
+            // Thêm bạn vào danh sách bạn bè của client
             server.addFriend(clientInfo.getClientName(), friendName);
-            ClientHandler c = server.getClientHandler(friendName);
-            if (c != null) {
-                c.sendResponse("addfriendpassive-" + this.getClientInfo().getClientName());
+
+            // Lấy ClientHandler của người bạn nếu họ đang online
+            ClientHandler friendHandler = server.getClientHandler(friendName);
+
+            // Thông báo cho người bạn (nếu họ đang online) về yêu cầu kết bạn mới
+            if (friendHandler != null) {
+                System.out.println("addfriendpassive_CLIENTHANDLER"+this.getClientInfo().getClientName());
+                System.out.println("friendHandler"+friendHandler);
+                friendHandler.sendResponse("addfriendpassive-" + this.getClientInfo().getClientName());
             }
-            this.sendResponse("addfriend-" + "success-" + friendName + "-" + server.getClientStatus(friendName));
-//            sendSuccessRes(req, friendName);
+
+            // Gửi phản hồi thành công cho người yêu cầu với trạng thái của người bạn
+            String friendStatus = server.getClientStatus(friendName);
+            System.out.println("addfriend-success-" + friendName + "-" + friendStatus);
+
+            this.sendResponse("addfriend-success-" + friendName + "-" + friendStatus);
         } else {
-            this.sendResponse("addfriend-" + "failed"+ "-null" + "-null");
+            // Gửi phản hồi thất bại cho người yêu cầu nếu friendName không tồn tại
+            this.sendResponse("addfriend-failed-null-null");
         }
     }
+
 
     private void handleConnectFriend(String nameFrom, String nameTo) throws IOException {
         ClientHandler c = this.server.getClientHandler(nameTo);
@@ -285,6 +320,41 @@ public class ClientHandler implements Runnable{
     public void sendResponse(String mess) throws IOException {
         synchronized (this) {
             this.writer.writeUTF(mess);
+        }
+    }
+
+    private void handleCreateGroup(String[] segments) throws IOException {
+        String groupName = segments[1];
+        if (server.createGroup(groupName)) {
+            this.sendResponse("creategroup-success-" + groupName);
+        } else {
+            this.sendResponse("creategroup-failed-" + groupName);
+        }
+    }
+
+    private void handleAddUserToGroup(String[] segments) throws IOException {
+        String groupName = segments[1];
+        String username = segments[2];
+        if (server.addUserToGroup(groupName, username)) {
+            this.sendResponse("addtogroup-success-" + groupName + "-" + username);
+        } else {
+            this.sendResponse("addtogroup-failed-" + groupName + "-" + username);
+        }
+    }
+
+    private void handleGroupMessage(String[] segments) throws IOException {
+        String groupName = segments[1];
+        String message = segments[2];
+        ChatGroup group = server.getGroup(groupName);
+        if (group != null) {
+            for (String member : group.getMembers()) {
+                ClientHandler memberHandler = server.getClientHandler(member);
+                if (memberHandler != null) {
+                    memberHandler.sendResponse("groupmessage-" + groupName + "-" + clientInfo.getClientName() + "-" + message);
+                }
+            }
+        } else {
+            this.sendResponse("groupmessage-failed-" + groupName);
         }
     }
 

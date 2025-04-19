@@ -17,6 +17,8 @@ import javax.swing.text.Style;
 import javax.swing.text.StyleConstants;
 import javax.swing.text.StyledDocument;
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.Date;
 import java.util.Observable;
 import java.util.Observer;
@@ -42,15 +44,20 @@ public class MainController implements Observer {
         for(PeerInfo p:this.chatClient.getClientInfo().friendList) {
             this.mainUI.getLf().addUser(new Friend(p.getName(), p.getStatus()));
         }
+        //lấy ra danh sách bạn bè
         this.mainUI.getList_user().addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseClicked(java.awt.event.MouseEvent evt) {
                 list_userMouseClicked(evt);
             }
         });
-
+//gửi tin nhắn
         this.mainUI.getSend_mess_but().addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                sendText();
+                try {
+                    sendText();
+                } catch (UnknownHostException e) {
+                    throw new RuntimeException(e);
+                }
             }
         });
 
@@ -58,7 +65,12 @@ public class MainController implements Observer {
             public void keyPressed(java.awt.event.KeyEvent evt) {
                 if(evt.getKeyCode() == java.awt.event.KeyEvent.VK_ENTER)
                 {
-                    sendText();
+                    //gửi tin nhan
+                    try {
+                        sendText();
+                    } catch (UnknownHostException e) {
+                        throw new RuntimeException(e);
+                    }
                     evt.consume();
                 }
             }
@@ -130,42 +142,43 @@ public class MainController implements Observer {
         loginController.initController();
     }
 
-    private void sendText() {
-        String mess = this.mainUI.getInput_text().getText();
-        if (!mess.equals("") && this.currentPeer != null)
-        {
-//            String[] indexString = text.split(" ");
-//            if (indexString[0].equals("update") && indexString.length==3){
-//                lf.updateStatus(indexString[1] , Integer.parseInt(indexString[2]));
-//                list_user.updateUI();
-//            }
-            //Backend
-            this.currentPeer.sendMessage(mess);
+    private void sendText() throws UnknownHostException {
+        String mess = this.mainUI.getInput_text().getText(); // Lấy nội dung tin nhắn từ trường văn bản (input_text)
 
-            //UI
+        if (!mess.equals("") && this.currentPeer != null) { // Kiểm tra nếu tin nhắn không rỗng và người nhận tin nhắn (currentPeer) không phải là null
+            // Backend
+            InetAddress myIP = InetAddress.getLocalHost();; // Lấy địa chỉ IP của máy
+            String myLocalIP = myIP.getHostAddress();
+
+            String messip="("+myLocalIP+":)"+mess;
+            this.currentPeer.sendMessage(messip); // Gửi tin nhắn đến đối tượng currentPeer (người nhận)
+            System.out.println("main"+currentPeer);
+            // UI
             try {
+                // Lấy StyledDocument của textPane liên kết với currentPeer
                 StyledDocument doc = this.currentPeer.getTextPane().getStyledDocument();
                 Style style = this.currentPeer.getTextPane().addStyle("myStyle", null);
+
+                // Tạo một JLabel để hiển thị người gửi (Me:), có định dạng font và màu sắc
                 JLabel label_me = new JLabel("Me:  ");
-                label_me.setFont(new java.awt.Font("Times New Roman", 1, 16));
-                label_me.setForeground(new java.awt.Color(160, 28, 28));
-                StyleConstants.setComponent(style, label_me);
-                doc.insertString(doc.getLength(), " ", style);
+                label_me.setFont(new java.awt.Font("Times New Roman", 1, 16)); // Font cho JLabel
+                label_me.setForeground(new java.awt.Color(160, 28, 28)); // Màu cho tên người gửi (Me)
+                StyleConstants.setComponent(style, label_me); // Đặt JLabel vào style
+                doc.insertString(doc.getLength(), " ", style); // Thêm khoảng trắng sau JLabel
 
+                // Tạo JTextArea để hiển thị nội dung tin nhắn
                 JTextArea textArea = new JTextArea(mess);
-                textArea.setLineWrap(true);
-                textArea.setEditable(false);
-                textArea.setFont(new java.awt.Font("Times New Roman", 1, 14));
+                textArea.setLineWrap(true); // Cho phép tự động xuống dòng khi quá dài
+                textArea.setEditable(false); // Không cho phép chỉnh sửa tin nhắn
+                textArea.setFont(new java.awt.Font("Times New Roman", 1, 14)); // Font cho tin nhắn
 
-                StyleConstants.setComponent(style, textArea);
-                doc.insertString(doc.getLength(), "\n", style);
-            } catch (BadLocationException ex) {
+                StyleConstants.setComponent(style, textArea); // Đặt JTextArea vào style
+                doc.insertString(doc.getLength(), "\n", style); // Thêm dòng mới vào StyledDocument
+            } catch (BadLocationException ex) { // Bắt lỗi khi thao tác với StyledDocument
                 Logger.getLogger(MainUI.class.getName()).log(Level.SEVERE, null, ex);
             }
-            this.mainUI.setInput_text("");
-            System.out.println("[CLIENT] enter mess:" +mess);
 
-
+            this.mainUI.setInput_text(""); // Xóa nội dung trong trường văn bản sau khi gửi tin nhắn
         }
     }
 
@@ -177,6 +190,7 @@ public class MainController implements Observer {
             int index = list.locationToIndex(evt.getPoint());
             System.out.println(index + "\n");
             String username = this.mainUI.getLf().getUserByIndex(index).getUser_name();
+
 //            boolean isExist = false;
 //            for(PeerHandler peer:this.chatClient.getPeerList()) {
 //                if(username.equals(peer.getTargetClientName())) {
@@ -199,6 +213,8 @@ public class MainController implements Observer {
                 this.mainUI.getChat_section().add(this.currentPeer.getTextPane());
 //                this.mainUI.setCurrent_text_pane(textPane);
                 this.mainUI.getUser_name_label().setText(username);
+                System.out.println("currentPeer"+currentPeer);
+
                 this.mainUI.getChat_section().repaint();
 //                    this.mainUI.getList_chat_section().put(index , temp);
                 this.mainUI.getLf().updateStatus(index, 1);
@@ -210,6 +226,7 @@ public class MainController implements Observer {
             }
             else {
                 String req = "connectfriendto-" + this.chatClient.getClientInfo().getClientName() + "-" + username;
+                System.out.println("req"+req);
                 long startTime = System.currentTimeMillis();
                 this.chatClient.sendReq(req);
                 String resMess = null;
@@ -217,6 +234,8 @@ public class MainController implements Observer {
                 while((new Date()).getTime() - startTime < 1000*3) {
                     synchronized (this) {
                         resMess = this.chatClient.getResponseMessage();
+                        System.out.println("currentPeer"+currentPeer);
+
                     }
                     if (resMess != null && resMess.equals("success-" + username)) {
                         connectSuccess = true;
@@ -233,6 +252,7 @@ public class MainController implements Observer {
                     this.currentPeer.setStatusWindow(false);
                     this.mainUI.getChat_section().removeAll();
                     this.currentPeer = this.chatClient.getPeerList().get(username);
+                    System.out.println("currentPeer"+currentPeer);
                     this.mainUI.getChat_section().add(this.currentPeer.getTextPane());
                     this.mainUI.getUser_name_label().setText(username);
                     this.mainUI.getChat_section().repaint();

@@ -25,7 +25,9 @@ public class MessageSender implements Runnable{
             synchronized (this) {
                 while(!this.messageQueue.isEmpty()) {
                     String request = messageQueue.remove();
-                    System.out.print(String.format("[CLIENT] Send message: %s", request));
+                    System.out.print
+
+                            (String.format("[CLIENT] Send message: %s", request));
                     try {
                         sender.writeUTF(request);
                         sender.flush();
@@ -55,6 +57,7 @@ public class MessageSender implements Runnable{
 
     public void sendMessage(String cnt) {
         String mess = cnt + "-" + this.hostClient.getClientName() + "-" + new Timestamp(System.currentTimeMillis()).toString();
+        System.out.println("this.hostClient.getClientName()"+this.hostClient.getClientName());
         synchronized (this) {
             this.messageQueue.add(mess);
         }

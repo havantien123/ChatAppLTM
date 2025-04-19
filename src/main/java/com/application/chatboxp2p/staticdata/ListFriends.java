@@ -1,29 +1,26 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package com.application.chatboxp2p.staticdata;
 
-import java.awt.List;
 import javax.swing.DefaultListModel;
-
-import backend.client.FileSender;
-import org.w3c.dom.ls.LSInput;
+import com.application.chatboxp2p.staticdata.Friend;
 
 /**
- *
- * @author Khoa
+ * Manages the list of friends and groups.
  */
 public class ListFriends {
     private DefaultListModel<Friend> list_friends = new DefaultListModel<>();
-    
-    public void addUser(Friend user){
+
+
+    public void addUser(Friend user) {
         list_friends.addElement(user);
     }
+
+    public void addGroup(String groupName) {
+        list_friends.addElement(new Friend(groupName, "group"));
+    }
+
     public void removeUser(String name) {
         System.out.println(name);
-        for (int i = 0 ; i < list_friends.getSize(); i ++) {
+        for (int i = 0; i < list_friends.getSize(); i++) {
             if (list_friends.elementAt(i).getUser_name().equals(name)) {
                 list_friends.remove(i);
                 break;
@@ -31,28 +28,32 @@ public class ListFriends {
         }
     }
 
-    public DefaultListModel getListModel()
-    {
+    public DefaultListModel<Friend> getListModel() {
         return list_friends;
     }
-    public void clear()
-    {
+
+    public void clear() {
         list_friends.clear();
     }
-    public Friend getUserByIndex(int index){
+
+    public Friend getUserByIndex(int index) {
         return list_friends.get(index);
     }
-    public void updateStatus(String user_name , int status){
-        for (int i = 0; i<list_friends.getSize() ; i++){
-            if (list_friends.get(i).getUser_name().equals(user_name))
-            {
+
+    public void updateStatus(String user_name, int status) {
+        for (int i = 0; i < list_friends.getSize(); i++) {
+            if (list_friends.get(i).getUser_name().equals(user_name)) {
                 list_friends.get(i).setStatus(status);
                 break;
             }
         }
     }
-    public void updateStatus(int index , int status){
+
+    public void updateStatus(int index, int status) {
         list_friends.get(index).setStatus(status);
     }
-    public DefaultListModel<Friend> getList_friends(){ return this.list_friends;}
+
+    public DefaultListModel<Friend> getList_friends() {
+        return this.list_friends;
+    }
 }

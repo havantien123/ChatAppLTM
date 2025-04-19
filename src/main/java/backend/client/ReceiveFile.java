@@ -6,15 +6,13 @@
 package backend.client;
 
 import java.io.*;
-import java.net.Inet4Address;
-import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.sql.Timestamp;
 import java.util.Base64;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.JOptionPane;
+import javax.swing.text.BadLocationException;
 
 import org.apache.commons.lang3.StringUtils;
 import utils.FileInfo;
@@ -32,8 +30,11 @@ public class ReceiveFile extends Thread{
     private StringBuilder fileStringBuilder = new StringBuilder();
     private DataInputStream is;
     private boolean isSending = false;
-    public ReceiveFile(MessageSender send_mess){
+    private  PeerHandler peerHandler;
+
+    public ReceiveFile(MessageSender send_mess, PeerHandler peerHandler){
         this.sender = send_mess;
+        this.peerHandler=peerHandler;
         time_out = true;
     }
     
@@ -57,7 +58,6 @@ public class ReceiveFile extends Thread{
             this.sender.sendMessage("RejectSendFile");
         else if (accept == 0 && time_out){
             ServerSocket serverSocket = new ServerSocket(portReceiveFile);
-
             this.sender.sendMessage("AcceptSendFile-" + String.valueOf(portReceiveFile));
             portReceiveFile++;
 
@@ -74,63 +74,124 @@ public class ReceiveFile extends Thread{
         }
         
     }
-    
+
     private void receivingFile(Socket client) throws IOException{
         try {
                 // receive file info
 //                ois = new ObjectInputStream(client.getInputStream());
 //                FileInfo fileInfo = (FileInfo) ois.readObject();
-            String home = System.getProperty("user.home");
-            String name_os = System.getProperty("os.name").toLowerCase();
-            String dir = home;
-            if (name_os.equals("windows 10"))
-            {
-                dir += "\\Downloads\\";
-            }
-            else{
-                dir = dir + "/Downloads/";
-            }
+            String home = "D:\\";
             String message      = null;
             String[] segments   = null;
             String fileName     = null;
-            OutputStream out = new BufferedOutputStream(new FileOutputStream(dir + "Unconfirmed"));
+            String hostip=null;
+            OutputStream out = new BufferedOutputStream(new FileOutputStream(home + "Unconfirmed"));
             while(this.isSending) {
                 message = is.readUTF();
+                System.out.println("message"+message);
+
                 segments = StringUtils.split(message, ',');
+                System.out.println("segments"+segments);
                 if (segments != null && segments.length > 0) {
                     String type = segments[0];
+                    System.out.println("type"+segments[0]);
                     switch (type) {
                         case "file": {
-//                            System.out.println("RECEIVING FILE");
+                            System.out.println("RECEIVING FILE");
                             String content = message.substring(message.indexOf(",") + 1);
                             out.write(Base64.getDecoder().decode(content));
-//                            this.fileStringBuilder = new StringBuilder();
-//                            this.fileStringBuilder.append(content);
+                            this.fileStringBuilder = new StringBuilder();
+                            this.fileStringBuilder.append(content);
                             break;
                         }
                         case "endfile": {
-                            String content = message.substring(message.indexOf(",") + 1);
-                            String finalcontent = content.substring(content.indexOf(",") + 1);
-                            System.out.println(finalcontent);
-//                            fileStringBuilder.append(finalcontent);
-                            out.write(Base64.getDecoder().decode(finalcontent));
-                            fileName = segments[1];
-                            System.out.println(fileName);
-                            File file = new File(dir+ "Unconfirmed");
-                            File newFile = new File(dir + fileName);
-                            if(file.renameTo(newFile)){
-                                System.out.println("File received success");;
-                            }else{
-                                System.out.println("File received failed");
+//                            String content = message.substring(message.indexOf(",") + 1);
+//                            String content1 = message.substring(message.indexOf(",") + 1);
+                            String finalContent = segments[segments.length - 1];
+
+//                            String finalContent = content1.substring(content.indexOf(",") + 1);
+                            fileStringBuilder.append(finalContent);
+                            out.write(Base64.getDecoder().decode(finalContent));
+
+                            // Get the file name from the message
+hostip=segments[1];
+                            fileName = segments[2];
+                            System.out.println("Received file name: " + fileName);
+
+//                            File file = new File(home + File.separator + "Unconfirmed");
+//                            File newFile = new File(home + File.separator + fileName);
+//
+//                            if (file.renameTo(newFile)) {
+//                                System.out.println("File received successfully.");
+//                            } else {
+//                                System.out.println("Failed to rename file.");
+//                            }
+                            // After receiving and writing the file
+                            File file = new File(home + File.separator + "Unconfirmed");
+                            File newFile = new File(home + File.separator + fileName);
+
+// Ensure the output stream is flushed and closed before renaming
+                            try {
+                                if (out != null) {
+                                    out.flush();  // Make sure all data is written to disk
+                                    out.close();  // Close the output stream
+                                }
+                            } catch (IOException e) {
+                                e.printStackTrace();
                             }
+
+// Debugging: Print paths to check for any issues
+                            System.out.println("Unconfirmed path: " + file.getAbsolutePath());
+                            System.out.println("New file path: " + newFile.getAbsolutePath());
+
+// Check if source file exists
+                            if (file.exists()) {
+                                System.out.println("Source file exists: " + file.getName());
+
+                                // Check if the target file already exists
+                                if (newFile.exists()) {
+                                    System.out.println("Target file already exists: " + newFile.getName());
+
+                                    // If the target file exists, delete it and retry renaming
+                                    if (newFile.delete()) {
+                                        System.out.println("Deleted existing target file. Retrying rename...");
+                                        if (file.renameTo(newFile)) {
+
+                                            System.out.println("File successfully renamed after deleting the existing one.");
+                                        } else {
+                                            System.out.println("Failed to rename after deleting the existing file.");
+                                        }
+                                    } else {
+                                        System.out.println("Failed to delete existing target file.");
+                                    }
+                                } else {
+                                    // No conflict with target file, directly rename
+                                    if (file.renameTo(newFile)) {
+//                                        this.peerHandler.addText("Received file: " + fileName);
+
+                                        System.out.println("File received and renamed successfully.");
+                                    } else {
+                                        System.out.println("Failed to rename file.");
+                                    }
+                                }
+                            } else {
+                                System.out.println("Source file does not exist: " + file.getName());
+                            }
+
                             out.close();
                             this.isSending = false;
+                            try {
+                                this.peerHandler.addText("("+hostip+" ) "+home+fileName);
+                            } catch (BadLocationException e) {
+                                e.printStackTrace();
+                            }
+
                             break;
                         }
                     }
                 }
             }
-                  
+
         } catch (IOException e) {
             e.printStackTrace();
 //        } catch (ClassNotFoundException e) {
@@ -144,7 +205,6 @@ public class ReceiveFile extends Thread{
     
     private boolean createFile(FileInfo fileInfo) throws IOException {
         BufferedOutputStream bos = null;
-         
         try {
             if (fileInfo != null) {
                 String home = System.getProperty("user.home");

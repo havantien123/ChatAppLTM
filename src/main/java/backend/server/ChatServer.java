@@ -11,14 +11,16 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.Map;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
 public class ChatServer {
     private ArrayList<ClientHandler> clientHandlerList = new ArrayList<>();
     private HashMap<String, ClientInfoServer> clientList = new HashMap<>();
+    private final Map<String, ChatGroup> chatGroups = new HashMap<>();
     private int serverPort;
-    private ServerSocket serverSocket;
+        private ServerSocket serverSocket;
     private int numThreads = 10;
 
     public ChatServer(int port) {
@@ -90,9 +92,10 @@ public class ChatServer {
 //    public int getNumFriend(String username) {
 //        return clientList.get(username).getFriendList().size();
 //    }
-
+//Tạo tài khoản
     public void createAccount(String username, String password) {
         LinkedList<String> empty = new LinkedList<>();
+        // Tạo tài khoản trên server
         ClientInfoServer newClient = new ClientInfoServer(username, password, "on", empty);
         clientList.put(username, newClient);
     }
@@ -119,16 +122,23 @@ public class ChatServer {
 //    }
 
     public void addFriend(String username, String friendName) {
+        // Lặp qua tất cả các key (tên người dùng) trong clientList
         for (String key : clientList.keySet()) {
+            // Kiểm tra nếu key hiện tại bằng với friendName
             if (key.equals(friendName)) {
+                // Lặp qua danh sách bạn bè của username
                 for (String friend : clientList.get(username).getFriendList()) {
+                    // Kiểm tra nếu friendName đã là bạn của username hoặc friendName là username
                     if (friend.equals(friendName) || friendName.equals(username)) return;
                 }
+                // Thêm friendName vào danh sách bạn bè của username
                 clientList.get(username).getFriendList().add(friendName);
+                // Thêm username vào danh sách bạn bè của friendName
                 clientList.get(friendName).getFriendList().add(username);
             }
         }
     }
+
 
     public void removeFriend(String username, String friendName) {
        for (int i = 0; i < clientList.get(username).getFriendList().size(); i++) {
@@ -156,7 +166,7 @@ public class ChatServer {
         }
         return 0;
     }
-
+// kiểm tra tên người dùng đã tồn tại chưa
     public boolean findUsername(String username) {
         ClientInfoServer value = clientList.get(username);
         return value != null;
@@ -190,17 +200,50 @@ public class ChatServer {
         }
     }
 
+    public boolean createGroup(String groupName) {
+        if (chatGroups.containsKey(groupName)) {
+            return false; // Group already exists
+        }
+        chatGroups.put(groupName, new ChatGroup(groupName));
+        return true;
+    }
+
+    public ChatGroup getGroup(String groupName) {
+        return chatGroups.get(groupName);
+    }
+
+    public boolean addUserToGroup(String groupName, String username) {
+        ChatGroup group = chatGroups.get(groupName);
+        if (group != null) {
+            return group.addMember(username);
+        }
+        return false; // Group not found
+    }
+
+    public boolean removeUserFromGroup(String groupName, String username) {
+        ChatGroup group = chatGroups.get(groupName);
+        if (group != null) {
+            return group.removeMember(username);
+        }
+        return false; // Group not found
+    }
+
 
     public void start() throws IOException {
         System.out.println("[SERVER] Start server.");
         initServer();
+        // Tạo một Executor với một Fixed Thread Pool có số lượng thread cố định (numThreads)
         Executor executor = Executors.newFixedThreadPool(this.numThreads);
         try {
+            // Tạo một ServerSocket lắng nghe trên cổng serverPort
             serverSocket = new ServerSocket(this.serverPort);
             while (true) {
                 Socket client = serverSocket.accept();
+                // Tạo một ClientHandler mới để xử lý kết nối của client
                 ClientHandler c = new ClientHandler(this, client);
+                // Thêm ClientHandler vào danh sách quản lý các client
                 clientHandlerList.add(c);
+                // Sử dụng executor để chạy ClientHandler trong một thread riêng
                 executor.execute(c);
             }
         } catch (IOException e) {

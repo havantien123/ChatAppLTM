@@ -38,9 +38,11 @@ public class RequestReceiver implements Runnable {
                             this.chatClient.checkLogOut(segments[1]);
                             break;
                         case "addfriend":
+                            System.out.println("addFriend_RequestReceive");
                             this.chatClient.checkAddFriend(segments[1], segments[2], segments[3]);
                             break;
                         case "addfriendpassive":
+                            System.out.println("addfriendpassive_RECEIVER"+segments[1]);
                             this.chatClient.addFriendPassive(segments[1]);
                             break;
                         case "removefriendpassive":
